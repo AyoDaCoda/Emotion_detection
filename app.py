@@ -16,7 +16,7 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Load the TFLite model
-interpreter = tf.lite.Interpreter(model_path="face_emotionModel.tflite")
+interpreter = tf.lite.Interpreter(model_path="face_emotionModel_compat.tflite")
 interpreter.allocate_tensors()
 
 # Get input and output details
