@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request
-from keras.models import load_model
 from keras.preprocessing import image
 import numpy as np
 import sqlite3
 import os
 from datetime import datetime
+import tensorflow as tf
 from werkzeug.utils import secure_filename
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -14,8 +15,13 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Load the trained emotion detection model
-model = load_model('face_emotionModel.h5')
+# Load the TFLite model
+interpreter = tf.lite.Interpreter(model_path="face_emotionModel.tflite")
+interpreter.allocate_tensors()
+
+# Get input and output details
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 # Define emotion labels (same as those used in training)
 emotion_labels = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
@@ -60,10 +66,14 @@ def submit():
         img = image.load_img(img_path, target_size=(48, 48), color_mode='grayscale')
         img_array = image.img_to_array(img)
         img_array = np.expand_dims(img_array, axis=0)
-        img_array /= 255.0
+        img_array = img_array.astype('float32') / 255.0
 
-        # Predict emotion
-        predictions = model.predict(img_array)
+        # Make prediction
+        interpreter.set_tensor(input_details[0]['index'], img_array)
+        interpreter.invoke()
+        predictions = interpreter.get_tensor(output_details[0]['index'])
+
+        # Get emotion label
         emotion = emotion_labels[np.argmax(predictions)]
 
         # Store user info + emotion in database
